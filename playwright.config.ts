@@ -17,10 +17,11 @@ export default defineConfig({
       name: 'setup',
       testDir: './tests/fixtures',
       testMatch: /global\.setup\.ts/,
+      use: { channel: 'chrome' },
     },
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
       testDir: './tests/specs',
       dependencies: ['setup'],
     },
