@@ -1,1 +1,7 @@
 Credentials.txt
+node_modules/
+.env
+storage/
+test-results/
+playwright-report/
+blob-report/
