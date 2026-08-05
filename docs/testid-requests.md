@@ -4,4 +4,4 @@ Elements we can't reliably target by visible text, ARIA role, or label. Each row
 
 | Page | Element | Why it's hard to target | Current selector (best-effort) | Suggested `data-testid` |
 |------|---------|---------------------------|----------------------------------|---------------------------|
-| Storefront header | Account menu button shown after a customer signs in (replaces the "Sign in" button) | No visible text and no `aria-label` once signed in | Positional (`nth` in the header's button list) | `account-menu-button` |
+| Storefront header | Account menu button shown after a customer signs in (replaces the "Sign in" button) | No visible text and no `aria-label` once signed in | `header button[aria-haspopup="menu"]` (relies on the Radix dropdown-trigger attribute, not a stable id) | `account-menu-button` |
