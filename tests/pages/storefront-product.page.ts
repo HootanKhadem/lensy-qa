@@ -5,7 +5,7 @@ export class StorefrontProductPage {
   constructor(private page: Page) {}
 
   async goto(slug: string) {
-    await this.page.goto(`${env.storefrontUrl()}en/product/${slug}`);
+    await this.page.goto(new URL(`en/product/${slug}`, env.storefrontUrl()).toString());
   }
 
   async expectProductName(name: string) {
