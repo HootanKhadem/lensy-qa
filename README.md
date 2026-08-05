@@ -5,7 +5,8 @@ Playwright + TypeScript end-to-end test suite for Lensy (storefront + admin pane
 ## Setup
 
 1. `npm install`
-2. `npx playwright install --with-deps chromium`
+2. `npx playwright install --with-deps chrome`
+   - Playwright is pinned to the `chrome` channel (see `playwright.config.ts`), so this requires Google Chrome to already be installed on your machine. CI works out of the box because GitHub Actions' `ubuntu-latest` runners ship Google Chrome preinstalled.
 3. Copy `.env.example` to `.env` and fill in values from `Credentials.txt` (never commit `.env`).
 
 ## Running tests

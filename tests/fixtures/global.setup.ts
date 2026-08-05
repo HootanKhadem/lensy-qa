@@ -16,6 +16,11 @@ setup('authenticate as customer', async ({ page }) => {
   const loginModal = new StorefrontLoginModal(page);
   await loginModal.open();
   await loginModal.login(env.customerEmail(), env.customerPassword());
-  await page.getByRole('button', { name: 'Sign in' }).waitFor({ state: 'detached' });
+  // Positive signal instead of an absence-based check: the storefront header replaces the
+  // "Sign in" trigger with an account-menu button once signed in. That button has no
+  // visible text or aria-label (tracked in docs/testid-requests.md), but it does carry
+  // aria-haspopup="menu" (its Radix dropdown-trigger role) — verified unique in the header
+  // against the live site, both logged out (absent) and logged in (present).
+  await page.locator('header button[aria-haspopup="menu"]').waitFor({ state: 'visible' });
   await page.context().storageState({ path: 'storage/customer.json' });
 });

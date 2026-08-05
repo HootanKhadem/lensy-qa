@@ -9,6 +9,6 @@ export class StorefrontProductPage {
   }
 
   async expectProductName(name: string) {
-    await expect(this.page.getByRole('heading', { name })).toBeVisible();
+    await expect(this.page.getByRole('heading', { name, exact: true })).toBeVisible();
   }
 }
