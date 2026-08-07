@@ -9,10 +9,17 @@ export class AdminOrderDetailPage {
 
   async printInvoiceAndGetQrDataUrl(): Promise<string> {
     // Confirmed live (read-only investigation against seeded order #ORD-20260509-0003, chosen
-    // because it was already "Shipped" — per print-status.spec.ts's own "printing an
-    // already-shipped order does not revert its status" test, Print Invoice is a no-op on status
-    // for orders already at/beyond "Preparing", so clicking it here doesn't mutate seed data;
-    // confirmed afterward via expectStatus('Shipped') still passing):
+    // because it was already "Shipped"): clicking "Print Invoice" here did not change the
+    // order's status. The expectStatus('Shipped') check run immediately afterward did NOT
+    // pass — it errored with a Playwright strict-mode violation (getByText('Shipped',
+    // {exact:true}) matched 2 elements: the status-history entry and the status-combobox's own
+    // label, both reading "Shipped" — a pre-existing bug in expectStatus(), not something this
+    // change introduced or fixed). That specific failure mode — 2 matches, both still reading
+    // "Shipped", rather than 0 matches or a different status text — is the actual evidence that
+    // the click didn't mutate the order's status. (print-status.spec.ts has a test asserting
+    // this same no-op behavior in general, but that test has never run past placeOrder() in
+    // this repo — it's unexecuted plan-authored test code, not something proven by a passing
+    // run, so it isn't cited here as corroborating evidence.)
     //
     // Clicking "Print Invoice" does NOT call window.print() on the admin app's own page. Instead
     // it synchronously injects a hidden <iframe> containing the fully-built printable invoice
