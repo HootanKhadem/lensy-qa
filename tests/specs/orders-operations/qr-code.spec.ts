@@ -39,14 +39,30 @@ test('printed invoice QR code links to a working page', async ({ customerPage, a
   //      assertion — not spuriously, but because the QR is genuinely pointing at a dead route in
   //      this environment.
   const decodedUrl = decoded as string;
-  expect(decodedUrl).toMatch(/^https?:\/\/[^/]+\/o\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  // The comment above documents the observed shape as `https://lensy.app/en/o/{order-uuid}` --
+  // note the `/en/` locale segment between the host and `/o/`. The original regex required `/o/`
+  // to immediately follow the host, which could never match that documented shape. The locale
+  // segment is made optional (rather than required) since it isn't confirmed whether every QR
+  // includes one -- this way the assertion matches both `.../o/{uuid}` and `.../en/o/{uuid}`.
+  expect(decodedUrl).toMatch(
+    /^https?:\/\/[^/]+\/(?:[a-z]{2}\/)?o\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  );
 
   const response = await adminPage.request.get(decodedUrl);
   expect(response.ok(), `QR URL ${decodedUrl} responded with status ${response.status()}`).toBeTruthy();
 
   const body = await response.text();
+  // A broad regex like /not found|404/i risks false-positiving on a legitimately-working
+  // single-page app: bundler chunk names, inline route manifests, and analytics/error-tracking
+  // snippets commonly contain the literal substring "404" (or generic "not found" copy in an
+  // unrelated help/support link) even on pages that render correctly. The confirmed-live soft-404
+  // response for this QR's hardcoded `lensy.app` domain (see comment above; verified via a
+  // read-only `curl` during investigation) instead renders the specific, distinctive phrase "The
+  // Page/Resource You Requested Could Not Be Found" -- anchoring on that exact observed phrase
+  // (case-insensitively, to tolerate minor markup/whitespace differences) keeps this a meaningful
+  // check for the known failure mode instead of a broad net that can snag unrelated HTML.
   expect(
     body,
-    `QR URL ${decodedUrl} resolved to what looks like an error/not-found page, not a working order page`,
-  ).not.toMatch(/could not be found|page not found|not found|404/i);
+    `QR URL ${decodedUrl} resolved to what looks like the confirmed soft-404 error page, not a working order page`,
+  ).not.toMatch(/page\/resource you requested could not be found/i);
 });
