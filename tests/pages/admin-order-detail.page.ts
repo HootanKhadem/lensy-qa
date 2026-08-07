@@ -115,4 +115,60 @@ export class AdminOrderDetailPage {
   async expectNoConsoleErrors(errors: string[]) {
     expect(errors, `Unexpected console errors on order detail page: ${errors.join('; ')}`).toEqual([]);
   }
+
+  async editCustomerInfo(details: { firstName: string; lastName: string }) {
+    // Confirmed live via read-only investigation against seeded order #ORD-20260509-0003
+    // (opened the modal to inspect its fields, then closed it via the dialog's "Close" (X)
+    // button WITHOUT saving — confirmed via `[data-state]` on the dialog and the live network
+    // log showing no PATCH/POST fired — no change was persisted against seeded data).
+    //
+    // The pencil button next to the "Customer Information" heading has no accessible name
+    // (icon-only). Confirmed live via DOM inspection: the heading and its pencil button are
+    // the only two children of a shared header div (`<div class="... flex flex-row items-center
+    // justify-between ...">`) — that div has exactly one `<button>` in it (the "Resend
+    // Confirmation" button lives in a sibling content div, not here), so `xpath=..` from the
+    // heading followed by an unscoped `getByRole('button')` reaches the pencil button
+    // unambiguously, same as the brief's starting point.
+    //
+    // The resulting modal is titled "Edit customer" — and, unlike the checkout form (which the
+    // brief guessed this would mirror), it does NOT split first/last name: it has a single
+    // combined "Name" field (confirmed live: `<input id="cust_name">` labeled "Name", prefilled
+    // with the full name e.g. "Abdollah Mourad"), plus "Email" and "Phone" fields. Combining
+    // firstName + lastName into that one field is what makes the spec's
+    // `getByText('Updated Name')` assertion match after a real save.
+    await this.page
+      .getByRole('heading', { name: 'Customer Information' })
+      .locator('xpath=..')
+      .getByRole('button')
+      .click();
+    const dialog = this.page.getByRole('dialog', { name: 'Edit customer' });
+    await dialog.getByLabel('Name', { exact: true }).fill(`${details.firstName} ${details.lastName}`);
+    await dialog.getByRole('button', { name: 'Save' }).click();
+  }
+
+  async editShippingAddress(details: { street: string; city: string }) {
+    // Confirmed live via the same read-only investigation and the same discipline: opened the
+    // modal against seeded order #ORD-20260509-0003 to inspect its fields, closed it via the
+    // "Close" (X) button without saving, confirmed no PATCH/POST fired.
+    //
+    // The pencil button next to "Shipping Address" is likewise icon-only with no accessible
+    // name, and sits in the same header-div structure as Customer Information's (heading +
+    // exactly one button, confirmed live) — same `xpath=..` + unscoped `getByRole('button')`
+    // shape as the brief's starting point.
+    //
+    // The resulting modal is titled "Edit shipping address". Confirmed live via DOM inspection
+    // of its inputs and their `<label for>` associations: "First name", "Last name", "Phone",
+    // "Address line 1", "Address line 2", "City", "Area / Governorate", "Postal code", "Country
+    // code" — NOT "Street Address *"/"City *" like the checkout form's placeholders (the brief's
+    // guess). "Address line 1" is the street field; "City" matches directly.
+    await this.page
+      .getByRole('heading', { name: 'Shipping Address' })
+      .locator('xpath=..')
+      .getByRole('button')
+      .click();
+    const dialog = this.page.getByRole('dialog', { name: 'Edit shipping address' });
+    await dialog.getByLabel('Address line 1').fill(details.street);
+    await dialog.getByLabel('City', { exact: true }).fill(details.city);
+    await dialog.getByRole('button', { name: 'Save' }).click();
+  }
 }
