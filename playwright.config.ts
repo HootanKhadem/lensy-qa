@@ -8,6 +8,20 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  // Default is 30s. Bumped modestly: this suite's mutating Page Object methods now correctly
+  // wait for their own persistence signal (waitForResponse / dialog-close / DOM-settle) instead
+  // of firing a click and racing ahead (see admin-order-detail.page.ts, checkout.flow.ts), and
+  // `checkout.flow.ts`'s `placeOrder()` also retries its add-to-cart step once on a confirmed
+  // live CSRF-token race that occurs under this suite's normal `fullyParallel` concurrent-worker
+  // execution against the one shared `CUSTOMER_EMAIL` account. All of that is legitimate added
+  // robustness, not slack -- but it does add real wall-clock time, and under heavy parallel load
+  // against the shared test backend a 30s budget was observed to occasionally run out mid-flow
+  // (before ever reaching the known, separately-documented payment-methods bug this suite is
+  // meant to stop at), producing a different/earlier failure than intended. 60s gives that
+  // legitimately-slower flow enough headroom to reliably reach the real failure point instead
+  // (confirmed via repeated full-suite runs at 45s that it still occasionally wasn't enough
+  // under this suite's normal 8-worker default parallelism against the shared test backend).
+  timeout: 60_000,
   reporter: [['html', { open: 'never' }]],
   use: {
     trace: 'on-first-retry',
