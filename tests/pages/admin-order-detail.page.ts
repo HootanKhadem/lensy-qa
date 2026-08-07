@@ -146,6 +146,66 @@ export class AdminOrderDetailPage {
     await dialog.getByRole('button', { name: 'Save' }).click();
   }
 
+  async addItem(details: { productName: string; quantity: number; unitPrice: number }) {
+    // Confirmed live via read-only investigation against seeded order #ORD-20260509-0003
+    // (opened "Add item", typed a real product name into the search box, selected the
+    // resulting product to reveal the Quantity/Unit price fields, then closed the dialog via
+    // its "Close" (X) button WITHOUT clicking the dialog's own "Add item" submit button —
+    // confirmed via the dialog's `data-state` flipping to "closed" and the live network log
+    // for the whole investigation containing only GET requests, no POST/PATCH/DELETE — no item
+    // was added to the seeded order).
+    //
+    // The trigger is the page-level `getByRole('button', { name: 'Add item' })` above "Order
+    // Items", opening a dialog titled "Add item to order" (subtitle: "Search for a product,
+    // then enter quantity and price."). It's a two-step flow:
+    //  1. A `getByPlaceholder('Search by name or SKU...')` textbox filters a list of unlabeled
+    //     product buttons (name + price). Confirmed live this search is server-backed, not a
+    //     client-side filter of an already-fetched list: typing "Siren" fired
+    //     `GET /api/st/products?search=Siren&pageSize=30` and only then did the button list
+    //     narrow to the single matching product — so, like
+    //     `AdminOrdersListPage.searchAndOpen()`'s debounced order search, this waits for that
+    //     response before clicking a result to avoid a race against the still-unfiltered list.
+    //  2. Clicking a product button replaces the search UI with a "Quantity" number input
+    //     (prefilled "1") and a "Unit price (KWD)" number input (prefilled from the product's
+    //     own price), plus a "Change" button to go back to the product list.
+    // The dialog's OWN submit button is also named "Add item" (same accessible name as the
+    // trigger button on the page behind it), so it's scoped to `dialog` below to stay
+    // unambiguous — same discipline as `editCustomerInfo()`/`editShippingAddress()`'s dialog
+    // scoping.
+    await this.page.getByRole('button', { name: 'Add item' }).click();
+    const dialog = this.page.getByRole('dialog', { name: 'Add item to order' });
+    const searchSettled = this.page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/st/products') &&
+        response.url().includes(`search=${encodeURIComponent(details.productName)}`),
+    );
+    await dialog.getByPlaceholder('Search by name or SKU...').fill(details.productName);
+    await searchSettled;
+    // Plain-string `name` does a case-insensitive substring match (unlike a `RegExp`, this
+    // needs no escaping for product names containing regex-special characters, e.g. "ACUVUE
+    // OASYS for Astigmatism (6 Pack)").
+    await dialog.getByRole('button', { name: details.productName }).first().click();
+    await dialog.getByLabel('Quantity').fill(String(details.quantity));
+    await dialog.getByLabel('Unit price (KWD)').fill(String(details.unitPrice));
+    await dialog.getByRole('button', { name: 'Add item', exact: true }).click();
+  }
+
+  async deleteItem(index: number) {
+    // Confirmed live against seeded order #ORD-20260509-0003 (read-only: inspected the
+    // accessible-name computation via the accessibility tree, never clicked): each line item
+    // under "Order Items" renders an icon-only "Edit" button and an icon-only "Delete" button
+    // (no visible text in the DOM — `button.textContent` is empty for both — but each resolves
+    // an accessible name of "Edit"/"Delete" respectively, e.g. via visually-hidden label text or
+    // an SVG `<title>`, which is exactly what `getByRole('button', { name: 'Delete' })` matches
+    // on). This confirms the brief's proposed locator is correct as-is; not changed from the
+    // brief's stub.
+    await this.page.getByRole('button', { name: 'Delete' }).nth(index).click();
+  }
+
+  async getItemCount(): Promise<number> {
+    return this.page.getByRole('button', { name: 'Delete' }).count();
+  }
+
   async editShippingAddress(details: { street: string; city: string }) {
     // Confirmed live via the same read-only investigation and the same discipline: opened the
     // modal against seeded order #ORD-20260509-0003 to inspect its fields, closed it via the
