@@ -47,6 +47,10 @@ export class AdminProductFormPage {
     await this.page.getByRole('option', { name }).click();
   }
 
+  async getAllowPreOrder(): Promise<boolean> {
+    return (await this.page.getByLabel('Allow pre-order').getAttribute('aria-checked')) === 'true';
+  }
+
   async setAllowPreOrder(enabled: boolean) {
     const toggle = this.page.getByLabel('Allow pre-order');
     const checked = await toggle.getAttribute('aria-checked');

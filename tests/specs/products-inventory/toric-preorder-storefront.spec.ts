@@ -68,7 +68,7 @@ test('a pre-order product shows the Pre-order CTA on the storefront and can be a
   // Capture the real original state before mutating anything (rather than assuming pre-order
   // starts off), mirroring toric-preorder-admin.spec.ts / supplier-stock.spec.ts's pattern of
   // restoring what was actually there.
-  const originalEnabled = (await adminPage.getByLabel('Allow pre-order').getAttribute('aria-checked')) === 'true';
+  const originalEnabled = await form.getAllowPreOrder();
 
   // "Estimated arrival" only renders once "Allow pre-order" is on, so reveal it first to read
   // its real original value before overwriting it.
@@ -130,11 +130,29 @@ test('a pre-order product shows the Pre-order CTA on the storefront and can be a
       await adminPage.goto(editUrl);
       await form.expectLoaded();
     }
+    // "Estimated arrival" only renders while "Allow pre-order" is on -- force it on FIRST,
+    // regardless of the page's current/prior state, before touching the field. This matters on
+    // attempt 2+: this product's real original `pre_order_enabled` is `false`, and pre-order
+    // itself (unlike category) isn't the flaky field here, so attempt 1's save already
+    // correctly persisted it as `false`. A fresh `goto(editUrl)` on attempt 2 therefore loads
+    // with the switch off and the arrival field absent from the DOM -- setting arrival before
+    // switching pre-order on would hang forever against a non-existent `getByLabel(...)`
+    // locator (no explicit action timeout is configured anywhere in this suite) instead of
+    // ever reaching attempt 3 or failing with the clear category-mismatch message below.
+    await form.setAllowPreOrder(true);
     await form.setPreOrderEstimatedArrival(originalArrival);
     await form.setAllowPreOrder(originalEnabled);
     await reaffirmCategory();
     await form.save();
 
+    // A short settle delay before reading back: confirmed live that an immediate GET right
+    // after `save()`'s PATCH resolves can still read stale (empty) `category_ids` even when the
+    // save actually did persist the category correctly -- this app is served from Cloudflare
+    // Workers, and the mismatch is consistent with edge-cache propagation lag on the read path
+    // rather than the write itself failing. Without this delay the loop can burn through all 3
+    // attempts (and their real Save calls) chasing a false negative instead of confirming a
+    // write that already succeeded.
+    await adminPage.waitForTimeout(500);
     const response = await adminPage.request.get(productApiUrl);
     const body: { data?: { category_ids?: string[] } } = await response.json();
     categoryRestored = Array.isArray(body.data?.category_ids) && body.data.category_ids.length > 0;
