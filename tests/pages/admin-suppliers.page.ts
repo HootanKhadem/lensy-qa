@@ -9,9 +9,21 @@ export class AdminSuppliersPage {
   }
 
   async createSupplier(name: string) {
+    // Confirmed live via network capture: the dialog's Save button submits a POST to the
+    // admin app's own `/api/gl/suppliers` route (201 on success) — unlike the product edit
+    // form's Save (which writes straight to Supabase REST), this one does go through the
+    // admin app's API. Either way, the same race documented in
+    // `admin-product-form.page.ts`'s `save()` applies: if a caller navigates away (e.g. this
+    // spec's `list.goto()`) before the create request settles, the in-flight request gets
+    // aborted and the supplier is silently never created. Wait for the response here so
+    // callers can safely navigate immediately after `createSupplier()` returns.
+    const createSettled = this.page.waitForResponse(
+      (response) => response.url().includes('/api/gl/suppliers') && response.request().method() === 'POST',
+    );
     await this.page.getByRole('button', { name: 'Add supplier' }).click();
     await this.page.getByRole('dialog').getByRole('textbox').first().fill(name);
     await this.page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
+    await createSettled;
   }
 
   async expectSupplierListed(name: string) {

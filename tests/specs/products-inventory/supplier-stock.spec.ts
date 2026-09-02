@@ -34,4 +34,10 @@ test('supplier stock field and linked supplier persist on a product', async ({ a
   }
   await form.setSupplierStock(originalStock);
   await form.save();
+
+  // Verify the restore actually persisted, rather than relying on it implicitly.
+  await adminPage.reload();
+  await form.expectLoaded();
+  expect(await form.getLinkedSupplier()).toBe(originalSupplier);
+  expect(await form.getSupplierStock()).toBe(originalStock);
 });
