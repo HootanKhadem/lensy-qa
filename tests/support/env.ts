@@ -13,4 +13,6 @@ export const env = {
   adminPassword: () => required('ADMIN_PASSWORD'),
   customerEmail: () => required('CUSTOMER_EMAIL'),
   customerPassword: () => required('CUSTOMER_PASSWORD'),
+  supplierEmail: () => required('SUPPLIER_EMAIL'),
+  supplierPassword: () => required('SUPPLIER_PASSWORD'),
 };

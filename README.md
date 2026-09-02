@@ -15,6 +15,16 @@ Playwright + TypeScript end-to-end test suite for Lensy (storefront + admin pane
 - One file: `npx playwright test admin-smoke`
 - View last HTML report: `npx playwright show-report`
 
+## Environment Variables
+
+The following environment variables must be set in `.env` (copy from `.env.example`):
+
+- `ADMIN_URL` — Admin panel base URL
+- `STOREFRONT_URL` — Customer storefront base URL
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD` — Admin user credentials
+- `CUSTOMER_EMAIL` / `CUSTOMER_PASSWORD` — Customer user credentials
+- `SUPPLIER_EMAIL` / `SUPPLIER_PASSWORD` — Supplier portal user credentials (required only for supplier portal tests; see task 6 blocker note in `docs/superpowers/plans/`)
+
 ## Structure
 
 - `tests/pages/` — Page Objects, one class per screen/component.
