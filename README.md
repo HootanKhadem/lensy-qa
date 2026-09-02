@@ -48,6 +48,25 @@ fixed.
   blocks `tests/specs/orders-operations/qr-code.spec.ts` from passing its final assertions once
   the payment-methods bug above is fixed.
 
+A third, silently-destructive bug affects the admin product edit form used throughout
+`products-inventory`:
+
+- **Saving a product via the admin edit form's Save button unconditionally clears its category.**
+  Confirmed live (`tests/specs/products-inventory/toric-preorder-storefront.spec.ts`, on
+  "Cerruti 1881 CE8117"): clicking Save wipes `category_ids`/`category_id` back to
+  empty/`null` even on a save that never touched the Category checkbox tree at all — reproduced
+  repeatedly against a real product via the API response, not just the UI. The only way found to
+  make a category survive a save is to actually toggle its checkbox off then back on during the
+  same page session immediately before clicking Save (merely having it already checked on page
+  load isn't enough), and even that isn't fully reliable — it still occasionally didn't stick
+  across repeated real runs, for reasons that couldn't be pinned down further without the app's
+  source. This doesn't block any test outright, but it silently destroys data: any
+  `products-inventory` spec that calls `AdminProductFormPage.save()` without deliberately
+  re-affirming category will erase whatever category the product had. "Carrera CA8044/S" (used
+  by `expiry-date.spec.ts`, `supplier-stock.spec.ts`, and `product-form-smoke.spec.ts`) has
+  already lost its category this way from earlier tasks in this sub-project, before this bug was
+  identified.
+
 ## CI
 
 `.github/workflows/e2e.yml` runs on every push/PR to `main`, nightly at 03:00 UTC, and on demand. The HTML report is published to GitHub Pages after every run — see the repo's Pages URL for the latest results.
