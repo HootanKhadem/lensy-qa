@@ -59,10 +59,16 @@ export class AdminProductFormPage {
     await this.page.getByLabel('Estimated arrival').fill(text);
   }
 
+  async getPreOrderEstimatedArrival(): Promise<string> {
+    return this.page.getByLabel('Estimated arrival').inputValue();
+  }
+
   // Confirmed live: adding/removing a toric entry only mutates the form's local React state
   // (a row appended to/removed from the "Toric Stock Combinations" table) — no network request
   // fires until the page's own Save button is clicked. Unlike save(), these don't need a
   // waitForResponse guard; persistence is entirely handled by the existing save()'s PATCH wait.
+  // (Verified with a real Playwright run against the live product: no PATCH fires and the page
+  // stays on the /edit URL across an add-then-delete cycle.)
   async addToricEntry(entry: { sphere: string; cylinder: string; axis: string; qty: number }) {
     await this.page.locator('select').filter({ hasText: 'Sphere (SPH)' }).selectOption({ label: entry.sphere });
     await this.page.locator('select').filter({ hasText: 'Cylinder (CYL)' }).selectOption({ label: entry.cylinder });
@@ -71,13 +77,27 @@ export class AdminProductFormPage {
     await this.page.getByRole('button', { name: 'Add', exact: true }).click();
   }
 
+  // Scoped to the specific toric-combinations table (identified by its "AXIS" column header,
+  // confirmed live) rather than any `<table>` on the page, since the form has other tables
+  // elsewhere (e.g. the per-power "Lens Powers" table) that could otherwise be matched too.
+  private toricTable() {
+    return this.page.locator('table').filter({ hasText: 'AXIS' });
+  }
+
   async getToricEntryCount(): Promise<number> {
-    return this.page.locator('table tbody tr').count();
+    return this.toricTable().locator('tbody tr').count();
   }
 
   async deleteAllToricEntries() {
-    while ((await this.getToricEntryCount()) > 0) {
-      await this.page.locator('table tbody tr').first().getByRole('button').last().click();
+    // Confirmed live: each row's delete button has no aria-label/title but does carry a real
+    // (if terse) accessible name from its visible "✕" text content, so it can be targeted by
+    // role+name rather than a positional `.last()`.
+    const MAX_ITERATIONS = 100;
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+      const count = await this.getToricEntryCount();
+      if (count === 0) return;
+      await this.toricTable().locator('tbody tr').first().getByRole('button', { name: '✕' }).click();
     }
+    throw new Error(`deleteAllToricEntries: still had entries left after ${MAX_ITERATIONS} delete attempts`);
   }
 }
