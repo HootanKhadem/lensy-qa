@@ -8,7 +8,17 @@ export class AdminProductFormPage {
   }
 
   async save() {
+    // The Save button is disabled while the mutation is in-flight (`isSaving`). Wait for
+    // the persistence to complete before returning, rather than just firing the click and
+    // moving on — prevents callers from immediately doing `await adminPage.reload()` while
+    // the PATCH is still in-flight (which would abort the request and lose the mutation).
+    // Wait for the save API response to settle before returning. Confirmed live: the save
+    // endpoint is a PATCH to Supabase REST API at `/rest/v1/st_products`.
+    const saveSettled = this.page.waitForResponse(
+      (response) => response.url().includes('/rest/v1/st_products') && response.request().method() === 'PATCH',
+    );
     await this.page.getByRole('button', { name: 'Save', exact: true }).click();
+    await saveSettled;
   }
 
   async getExpiryDate(): Promise<string> {
