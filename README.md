@@ -82,9 +82,9 @@ A third, silently-destructive bug affects the admin product edit form used throu
     no longer saved by any spec in this suite (only read).
   - **"Alcon Dailies Total1"** (no longer used by any spec in this suite; originally Task 4's
     `toric-preorder-admin.spec.ts` target) — also `category_ids: []`, lost the same way, before
-    anyone realized it was a second victim. Not automatically repairable from this suite (see the
-    "OUTSTANDING" note in this sub-project's execution ledger) — left as-is since nothing in this
-    suite touches it anymore.
+    anyone realized it was a second victim. Left as-is, undamaged further, since nothing in this
+    suite touches it anymore — restoring its category is a manual admin-panel data fix, same as
+    "Carrera CA8044/S" above, not something this test suite does to live data itself.
   - **"Cerruti 1881 CE8117"** (`preorder-storefront.spec.ts`) — category intact
     (`category_ids: ["c1000001-0000-0000-0000-000000000006"]`, "Sun Glasses"), actively defended
     by `saveReaffirmingCategory('Sun Glasses')` on every save this spec makes.

@@ -8,10 +8,14 @@ test('supplier can sign in and update their own stock for a linked product', asy
   await portal.login(env.supplierEmail(), env.supplierPassword());
   await portal.expectSignedIn();
 
-  // Assumes Task 3's "Carrera CA8044/S" ↔ QA Test Supplier link is still in place, or that
-  // the supplied account is linked to at least one product with a visible stock row — adjust
-  // the row label to whatever product this supplier account is actually linked to.
-  const productLabel = 'Carrera CA8044/S';
+  // No fixed product↔supplier link exists in this suite to assume: Task 3's supplier-stock.spec.ts
+  // creates a freshly timestamped supplier account each run (never SUPPLIER_EMAIL) and, as of the
+  // products-inventory final review's I5 fix, links it to "Vitorio" rather than the originally
+  // shared "Carrera CA8044/S". Whichever real account SUPPLIER_EMAIL/SUPPLIER_PASSWORD point to
+  // will have its own, unrelated set of linked products — 'Vitorio' below is only a reasonable
+  // starting guess. Once real credentials are supplied, check the admin Suppliers page (or this
+  // account's own product list once signed in) for what it's actually linked to, and adjust.
+  const productLabel = 'Vitorio';
   const originalStock = await portal.getSupplierStock(productLabel);
 
   // Pick a value guaranteed to differ from the original, so the persistence assertion below is
