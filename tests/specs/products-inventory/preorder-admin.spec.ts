@@ -2,10 +2,23 @@ import { test, expect } from '../../fixtures/roles.fixture';
 import { AdminProductsListPage } from '../../pages/admin-products-list.page';
 import { AdminProductFormPage } from '../../pages/admin-product-form.page';
 
+// Renamed from "toric-preorder-admin.spec.ts" (see I8 in the products-inventory final review):
+// this test exercises the generic `pre_order_enabled`/`pre_order_estimated_arrival` fields only
+// — it never touched toric/astigmatism-specific fields despite the old name implying it did. Real
+// toric/astigmatism coverage now lives in toric-stock-entry.spec.ts, against a product genuinely
+// confirmed live to have "Toric / Astigmatism" enabled.
+//
+// Uses "Precision 30 pack" — reassigned off the originally-shared "Alcon Dailies Total1", which
+// is confirmed live to have already lost its own category to the save-wipes-category bug (see
+// C2/README's "Known Environment Bugs") before this task ever ran. "Precision 30 pack" is
+// confirmed live to still have its own intact "Clear Contact Lenses" category.
+const PRODUCT_NAME = 'Precision 30 pack';
+const CATEGORY_NAME = 'Clear Contact Lenses';
+
 test('enabling pre-order with an estimated arrival persists after reload', async ({ adminPage }) => {
   const list = new AdminProductsListPage(adminPage);
   await list.goto();
-  await list.searchAndOpenEdit('Alcon Dailies Total1');
+  await list.searchAndOpenEdit(PRODUCT_NAME);
 
   const form = new AdminProductFormPage(adminPage);
 
@@ -16,7 +29,7 @@ test('enabling pre-order with an estimated arrival persists after reload', async
   const originalArrival = await form.getPreOrderEstimatedArrival();
 
   await form.setPreOrderEstimatedArrival('2 weeks');
-  await form.save();
+  await form.saveReaffirmingCategory(CATEGORY_NAME);
 
   await adminPage.reload();
   await form.expectLoaded();
@@ -24,10 +37,10 @@ test('enabling pre-order with an estimated arrival persists after reload', async
   await expect(adminPage.getByLabel('Estimated arrival')).toHaveValue('2 weeks');
 
   // Restore: write back the captured original arrival value, then turn pre-order back off, so
-  // the shared demo product isn't left mutated (Foundation's storefront smoke test references it).
+  // the shared demo product isn't left mutated.
   await form.setPreOrderEstimatedArrival(originalArrival);
   await form.setAllowPreOrder(false);
-  await form.save();
+  await form.saveReaffirmingCategory(CATEGORY_NAME);
 
   // Verify the restore itself actually persisted, rather than relying on it implicitly.
   await adminPage.reload();

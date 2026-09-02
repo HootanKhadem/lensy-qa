@@ -23,7 +23,10 @@ export class AdminSuppliersPage {
     await this.page.getByRole('button', { name: 'Add supplier' }).click();
     await this.page.getByRole('dialog').getByRole('textbox').first().fill(name);
     await this.page.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click();
-    await createSettled;
+    const response = await createSettled;
+    // `waitForResponse` matches on URL/method alone, so a 4xx/5xx response looks identical to a
+    // successful one to every caller unless this checks the status too.
+    expect(response.ok(), `POST to ${response.url()} returned ${response.status()}`).toBeTruthy();
   }
 
   async expectSupplierListed(name: string) {

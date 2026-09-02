@@ -22,7 +22,13 @@ export class AdminProductsListPage {
     await this.page.getByPlaceholder('Search products...').fill(productName);
     await searchSettled;
 
-    const row = this.page.getByRole('row', { name: new RegExp(productName) });
+    // Escape regex metacharacters before building the row matcher: some catalog product names
+    // used across products-inventory specs contain literal parentheses (e.g. "ACUVUE OASYS for
+    // Astigmatism (6 Pack)"), which an unescaped `new RegExp(productName)` would silently
+    // mis-parse as a capturing group instead of literal characters -- the row would then never
+    // match. Names without special characters (the common case) are unaffected.
+    const escapedName = productName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const row = this.page.getByRole('row', { name: new RegExp(escapedName) });
     await row.getByRole('button').last().click();
     await this.page.getByRole('menuitem', { name: 'Edit' }).click();
   }

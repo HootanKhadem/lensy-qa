@@ -23,7 +23,7 @@ The following environment variables must be set in `.env` (copy from `.env.examp
 - `STOREFRONT_URL` — Customer storefront base URL
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — Admin user credentials
 - `CUSTOMER_EMAIL` / `CUSTOMER_PASSWORD` — Customer user credentials
-- `SUPPLIER_EMAIL` / `SUPPLIER_PASSWORD` — Supplier portal user credentials (required only for supplier portal tests; see task 6 blocker note in `docs/superpowers/plans/`)
+- `SUPPLIER_EMAIL` / `SUPPLIER_PASSWORD` — Supplier portal user credentials (required only for supplier portal tests; see the Task 6 blocker note in `docs/superpowers/plans/2026-09-02-products-inventory.md`)
 
 ## Structure
 
@@ -62,20 +62,49 @@ A third, silently-destructive bug affects the admin product edit form used throu
 `products-inventory`:
 
 - **Saving a product via the admin edit form's Save button unconditionally clears its category.**
-  Confirmed live (`tests/specs/products-inventory/toric-preorder-storefront.spec.ts`, on
-  "Cerruti 1881 CE8117"): clicking Save wipes `category_ids`/`category_id` back to
-  empty/`null` even on a save that never touched the Category checkbox tree at all — reproduced
-  repeatedly against a real product via the API response, not just the UI. The only way found to
-  make a category survive a save is to actually toggle its checkbox off then back on during the
-  same page session immediately before clicking Save (merely having it already checked on page
-  load isn't enough), and even that isn't fully reliable — it still occasionally didn't stick
-  across repeated real runs, for reasons that couldn't be pinned down further without the app's
-  source. This doesn't block any test outright, but it silently destroys data: any
-  `products-inventory` spec that calls `AdminProductFormPage.save()` without deliberately
-  re-affirming category will erase whatever category the product had. "Carrera CA8044/S" (used
-  by `expiry-date.spec.ts`, `supplier-stock.spec.ts`, and `product-form-smoke.spec.ts`) has
-  already lost its category this way from earlier tasks in this sub-project, before this bug was
-  identified.
+  Confirmed live (originally on "Cerruti 1881 CE8117" in
+  `tests/specs/products-inventory/preorder-storefront.spec.ts`): clicking Save wipes
+  `category_ids`/`category_id` back to empty/`null` even on a save that never touched the
+  Category checkbox tree at all — reproduced repeatedly against a real product via the API
+  response, not just the UI. The only way found to make a category survive a save is to actually
+  toggle its checkbox off then back on during the same page session immediately before clicking
+  Save (merely having it already checked on page load isn't enough), and even that isn't fully
+  reliable — it still occasionally didn't stick across repeated real runs, for reasons that
+  couldn't be pinned down further without the app's source. This doesn't block any test outright,
+  but it silently destroys data: any `products-inventory` spec that calls
+  `AdminProductFormPage.save()` without deliberately re-affirming category will erase whatever
+  category the product had. `AdminProductFormPage.saveReaffirmingCategory(categoryName)` is the
+  shared defense every mutating spec in this sub-project now uses in place of a bare `save()`.
+  Confirmed current state (live, checked while fixing the tests below) of every product this
+  sub-project's specs call `save()` on:
+  - **"Carrera CA8044/S"** (`product-form-smoke.spec.ts`, read-only) — `category_ids: []`. Lost
+    its category from earlier tasks' bare `save()` calls before this bug was identified, and is
+    no longer saved by any spec in this suite (only read).
+  - **"Alcon Dailies Total1"** (no longer used by any spec in this suite; originally Task 4's
+    `toric-preorder-admin.spec.ts` target) — also `category_ids: []`, lost the same way, before
+    anyone realized it was a second victim. Not automatically repairable from this suite (see the
+    "OUTSTANDING" note in this sub-project's execution ledger) — left as-is since nothing in this
+    suite touches it anymore.
+  - **"Cerruti 1881 CE8117"** (`preorder-storefront.spec.ts`) — category intact
+    (`category_ids: ["c1000001-0000-0000-0000-000000000006"]`, "Sun Glasses"), actively defended
+    by `saveReaffirmingCategory('Sun Glasses')` on every save this spec makes.
+  - **"Santos"** (`expiry-date.spec.ts`), **"Vitorio"** (`supplier-stock.spec.ts`), and
+    **"Precision 30 pack"** (`preorder-admin.spec.ts`) — all confirmed live to have intact
+    categories, each now defended the same way by its own spec.
+
+- **Removing a toric stock combination row in the admin edit form and clicking Save does not
+  delete it from the database.** Confirmed live and via `lensyadmin` source
+  (`src/app/api/le/product-toric-stock/route.ts`'s `POST` handler): the form's Save button only
+  ever bulk-*upserts* the sphere/cylinder/axis combinations still present in the form's local
+  state — it never calls the sibling per-entry `DELETE /api/le/product-toric-stock/[id]` route
+  (also present in source, fully implemented) for a combination removed from the UI's local list.
+  The row disappears from the table immediately (local React state) and the Save request's
+  payload correctly omits it, but the previously-persisted database row for that combination is
+  never actually deleted — it silently reappears on the next reload. `AdminProductFormPage`'s
+  `deleteToricEntryPermanently()` works around this by calling the per-entry `DELETE` route
+  directly instead of relying on the form's (non-functional for this purpose) delete-row-then-Save
+  flow; any future test that needs to remove a toric stock combination it added should use that,
+  not a plain UI delete + `save()`.
 
 ## CI
 
