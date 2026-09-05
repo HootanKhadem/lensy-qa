@@ -8,14 +8,15 @@ test('supplier can sign in and update their own stock for a linked product', asy
   await portal.login(env.supplierEmail(), env.supplierPassword());
   await portal.expectSignedIn();
 
-  // No fixed product↔supplier link exists in this suite to assume: Task 3's supplier-stock.spec.ts
-  // creates a freshly timestamped supplier account each run (never SUPPLIER_EMAIL) and, as of the
-  // products-inventory final review's I5 fix, links it to "Vitorio" rather than the originally
-  // shared "Carrera CA8044/S". Whichever real account SUPPLIER_EMAIL/SUPPLIER_PASSWORD point to
-  // will have its own, unrelated set of linked products — 'Vitorio' below is only a reasonable
-  // starting guess. Once real credentials are supplied, check the admin Suppliers page (or this
-  // account's own product list once signed in) for what it's actually linked to, and adjust.
-  const productLabel = 'Vitorio';
+  // The supplied SUPPLIER_EMAIL account is linked to the "Test supplier" record, whose products
+  // are: Carrera CA295, Santos, ACUVUE OASYS for Astigmatism (6 Pack), Ash brown, and
+  // RBJ 1900 3837 45. "Vitorio" (the previous placeholder) is not among them, and could not be
+  // — supplier-stock.spec.ts takes Vitorio over on every run, relinking it to a freshly
+  // timestamped supplier and restoring it afterwards, so under this config's fullyParallel
+  // execution the two specs would race and Vitorio would intermittently be absent from this
+  // account's list. "Ash brown" is used instead because no other spec in this suite touches it
+  // (Santos belongs to expiry-date.spec.ts).
+  const productLabel = 'Ash brown';
   const originalStock = await portal.getSupplierStock(productLabel);
 
   // Pick a value guaranteed to differ from the original, so the persistence assertion below is
