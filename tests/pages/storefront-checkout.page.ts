@@ -29,15 +29,20 @@ export class StorefrontCheckoutPage {
   }
 
   async selectCashOnDelivery() {
-    // Live investigation: an unscoped `label:has-text(/cash on delivery|COD/i)` (as originally
-    // specified in the brief) false-matches the unrelated "Coupon Code" label elsewhere on the
-    // page — "Code" contains the substring "Cod", so the case-insensitive /COD/i alternation
-    // matches it. That would silently click the wrong element and mask the known payment-methods
-    // bug instead of failing on it. Scoping the search to the "Payment Method" section's own
-    // container avoids the false match — with the bug active, this section renders no labels at
-    // all, so this correctly fails to find anything instead of clicking something unrelated.
+    // Scoped to the "Payment Method" section on purpose: an unscoped
+    // `:has-text(/cash on delivery|COD/i)` false-matches the unrelated "Coupon Code" label
+    // elsewhere on the page, because "Code" contains the substring "Cod" and the alternation is
+    // case-insensitive. That would silently click the wrong element.
+    //
+    // The section renders each method as a <button> containing a <span> with the method name
+    // (lensyweb checkout page, "Payment Method - Desktop" block) — there is no <label> in it. The
+    // previous `locator('label', ...)` was written while the payment-methods API was returning 500
+    // and the section rendered nothing at all, so a radio+label markup was assumed; it could never
+    // match once methods actually rendered. There are two Payment Method blocks, desktop and
+    // mobile, but the mobile one is under `lg:hidden` and Playwright runs at 1280px wide, so only
+    // the desktop block is in the accessibility tree and the heading resolves to one element.
     const paymentSection = this.page.getByRole('heading', { name: 'Payment Method' }).locator('xpath=..');
-    await paymentSection.locator('label', { hasText: /cash on delivery|COD/i }).click();
+    await paymentSection.getByRole('button', { name: /cash on delivery/i }).click();
   }
 
   async placeOrder() {
